@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>แผนที่แผ่นดินไหว - Earthquake Map Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Sarabun', sans-serif;
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      background-color: #f2f6fa;
+    }
+    #sidebar {
+      width: 360px;
+      background: linear-gradient(160deg, #002f4b, #005c97);
+      color: white;
+      padding: 1rem;
+      overflow-y: auto;
+      box-shadow: 3px 0 5px rgba(0,0,0,0.2);
+    }
+    #map {
+      flex: 1;
+    }
+    .event-item {
+      background-color: rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .event-item:hover {
+      background-color: rgba(255,255,255,0.25);
+    }
+    .event-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .event-time {
+      font-size: 0.9rem;
+      color: #dcdcdc;
+    }
+    input[type="file"], input[type="url"] {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+      #sidebar {
+        width: 100%;
+        height: 270px;
+      }
+      #map {
+        height: calc(100vh - 270px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h2>รายการแผ่นดินไหว</h2>
+    <label>เลือกไฟล์ (XML): <input type="file" id="fileInput" accept=".xml,.xls,.xlsx"></label>
+    <label>หรือ URL ไฟล์ XML: <input type="url" id="urlInput" placeholder="https://example.com/earthquake.xml"></label>
+    <div id="event-list"></div>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([9.4, 94.4], 6);
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20
+    }).addTo(map);
+
+    const quakeIcon = L.icon({
+      iconUrl: 'https://maphub.net/media/markers/b/mo/bmoqwdmaegtllls8/80.png',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30]
+    });
+
+    const eventList = document.getElementById("event-list");
+    let markers = [];
+
+    function clearAll() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      eventList.innerHTML = "";
+    }
+
+    function parseXML(content) {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(content, "text/xml");
+      const rows = [...xml.getElementsByTagName("Row")].slice(1);
+      return rows.map(row => {
+        const cells = row.getElementsByTagName("Cell");
+        return {
+          id: cells[1]?.textContent,
+          time: cells[3]?.textContent,
+          lat: parseFloat(cells[4]?.textContent),
+          lng: parseFloat(cells[5]?.textContent),
+          mag: parseFloat(cells[6]?.textContent),
+          depth: parseFloat(cells[7]?.textContent),
+          region: cells[9]?.textContent,
+          detail: cells[11]?.textContent
+        };
+      }).filter(e => e.id && !isNaN(e.lat) && !isNaN(e.lng));
+    }
+
+    function renderEvents(data) {
+      clearAll();
+      data.sort((a, b) => new Date(b.time) - new Date(a.time));
+      data.forEach(eq => {
+        const marker = L.marker([eq.lat, eq.lng], { icon: quakeIcon }).addTo(map)
+          .bindPopup(`<strong>${eq.id}</strong><br>${eq.region}<br>เวลา: ${eq.time}<br>ขนาด: ${eq.mag} ML<br>ลึก: ${eq.depth} กม.<br>${eq.detail}`);
+        markers.push(marker);
+
+        const div = document.createElement("div");
+        div.className = "event-item";
+        div.innerHTML = `<div class="event-title">${eq.region} (${eq.mag} ML)</div><div class="event-time">${eq.time}</div>`;
+        div.onclick = () => {
+          map.setView([eq.lat, eq.lng], 9);
+          marker.openPopup();
+        };
+        eventList.appendChild(div);
+      });
+    }
+
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = parseXML(reader.result);
+          if (!data || data.length === 0) throw new Error("ไม่มีข้อมูล");
+          renderEvents(data);
+        } catch (err) {
+          alert("เกิดข้อผิดพลาด: " + err.message);
+        }
+      };
+      reader.readAsText(file, "utf-8");
+    });
+
+    document.getElementById("urlInput").addEventListener("change", (e) => {
+      const url = e.target.value.trim();
+      if (!url) return;
+      fetch(url)
+        .then(res => res.text())
+        .then(txt => {
+          const data = parseXML(txt);
+          if (!data.length) throw new Error("ไม่มีข้อมูล");
+          renderEvents(data);
+        })
+        .catch(err => alert("โหลด URL ไม่สำเร็จ: " + err));
+    });
+  </script>
+</body>
+</html>
