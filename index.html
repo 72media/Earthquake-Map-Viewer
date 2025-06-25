@@ -2,30 +2,49 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>แผนที่แผ่นดินไหว - Earthquake Map Viewer</title>
+  <title>แผนที่แผ่นดินไหว</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-color: #005c97;
+      --secondary-color: #002f4b;
+      --accent-color: #ff5722;
+      --text-light: #ffffff;
+      --text-dark: #333333;
+      --bg-light: #f2f6fa;
+    }
+
     body {
       margin: 0;
       font-family: 'Sarabun', sans-serif;
       display: flex;
       flex-direction: row;
       height: 100vh;
-      background-color: #f2f6fa;
+      background-color: var(--bg-light);
+      color: var(--text-dark);
     }
+
     #sidebar {
       width: 360px;
-      background: linear-gradient(160deg, #002f4b, #005c97);
-      color: white;
+      background: linear-gradient(160deg, var(--secondary-color), var(--primary-color));
+      color: var(--text-light);
       padding: 1rem;
       overflow-y: auto;
       box-shadow: 3px 0 5px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      position: relative;
+      z-index: 1000;
     }
+
     #map {
       flex: 1;
+      transition: margin-left 0.3s ease;
     }
+
     .event-item {
       background-color: rgba(255,255,255,0.1);
       border-radius: 10px;
@@ -34,140 +53,752 @@
       cursor: pointer;
       transition: all 0.2s;
     }
+
     .event-item:hover {
       background-color: rgba(255,255,255,0.25);
+      transform: translateX(3px);
     }
+
+    .event-item.active {
+      background-color: rgba(255,255,255,0.3);
+      border-left: 4px solid var(--accent-color);
+    }
+
     .event-title {
       font-weight: 600;
       font-size: 1rem;
+      margin-bottom: 0.25rem;
     }
+
     .event-time {
       font-size: 0.9rem;
       color: #dcdcdc;
     }
-    input[type="file"], input[type="url"] {
-      margin-top: 0.5rem;
-      padding: 0.5rem;
+
+    .event-magnitude {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 24px;
+      margin-right: 8px;
+      font-weight: bold;
+      font-size: 0.8rem;
+    }
+
+    .magnitude-0 { background-color: #8bc34a; }
+    .magnitude-1 { background-color: #cddc39; }
+    .magnitude-2 { background-color: #ffeb3b; }
+    .magnitude-3 { background-color: #ffc107; }
+    .magnitude-4 { background-color: #ff9800; }
+    .magnitude-5 { background-color: #ff5722; }
+    .magnitude-6 { background-color: #f44336; }
+    .magnitude-7 { background-color: #d32f2f; }
+    .magnitude-8 { background-color: #b71c1c; }
+
+    .map-controls {
+      background-color: rgba(0,0,0,0.2);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+
+    .control-group {
+      margin-bottom: 0.5rem;
+    }
+
+    .control-group label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+
+    input[type="file"],
+    select {
       width: 100%;
+      padding: 0.5rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      background-color: rgba(255,255,255,0.1);
+      color: var(--text-light);
+      margin-bottom: 0.5rem;
+    }
+
+    button {
+      background-color: var(--accent-color);
+      color: white;
       border: none;
-      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-family: 'Sarabun', sans-serif;
     }
-    h2 {
-      margin-top: 0;
+
+    button:hover {
+      background-color: #e64a19;
     }
+
+    #loading {
+      padding: 1rem;
+      text-align: center;
+      color: var(--text-light);
+      display: none;
+    }
+
+    #stats {
+      background-color: rgba(0,0,0,0.2);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.25rem;
+    }
+
+    #toggle-sidebar {
+      display: none;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 0.5rem;
+      text-align: center;
+      background: var(--secondary-color);
+      cursor: pointer;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #toggle-sidebar:hover {
+      background: var(--primary-color);
+    }
+
     @media (max-width: 768px) {
-      body {
-        flex-direction: column;
-      }
       #sidebar {
         width: 100%;
-        height: 270px;
+        height: 40vh;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        transform: translateY(calc(100% - 48px));
       }
+
+      #sidebar.expanded {
+        transform: translateY(0);
+      }
+
       #map {
-        height: calc(100vh - 270px);
+        margin-left: 0;
+        height: 60vh;
       }
+
+      #toggle-sidebar {
+        display: block;
+      }
+    }
+
+    /* Popup styles */
+    .popup-content {
+      min-width: 200px;
+    }
+
+    .popup-content h4 {
+      margin-top: 0;
+      color: var(--primary-color);
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+
+    .popup-detail p {
+      margin: 5px 0;
+    }
+
+    .popup-detail strong {
+      display: inline-block;
+      width: 70px;
     }
   </style>
 </head>
 <body>
   <div id="sidebar">
     <h2>รายการแผ่นดินไหว</h2>
-    <label>เลือกไฟล์ (XML): <input type="file" id="fileInput" accept=".xml,.xls,.xlsx"></label>
-    <label>หรือ URL ไฟล์ XML: <input type="url" id="urlInput" placeholder="https://example.com/earthquake.xml"></label>
+    
+    <div class="map-controls">
+      <div class="control-group">
+        <label>เลือกชนิดแผนที่:</label>
+        <select id="map-type">
+          <option value="osm">แผนที่มาตรฐาน (OSM)</option>
+          <option value="google-hybrid">แผนที่ Google Hybrid</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label>เลือกไฟล์ข้อมูล:</label>
+        <input type="file" id="fileInput" accept=".xls,.xlsx,.xml,.geojson,.kml,.csv,.json">
+      </div>
+    </div>
+    
+    <div id="stats">
+      <div class="stat-item">
+        <span>จำนวนเหตุการณ์:</span>
+        <span id="total-events">0</span>
+      </div>
+      <div class="stat-item">
+        <span>ขนาดสูงสุด:</span>
+        <span id="max-magnitude">-</span>
+      </div>
+      <div class="stat-item">
+        <span>ความลึกเฉลี่ย:</span>
+        <span id="avg-depth">-</span>
+      </div>
+      <div class="stat-item">
+        <span>อัพเดตล่าสุด:</span>
+        <span id="last-update">-</span>
+      </div>
+    </div>
+    
+    <div id="loading">กำลังโหลดข้อมูล...</div>
+    
     <div id="event-list"></div>
+    
+    <div id="toggle-sidebar">▲ ซ่อน/แสดงรายการ ▲</div>
   </div>
+  
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
   <script>
-    const map = L.map('map').setView([9.4, 94.4], 6);
-    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      maxZoom: 20
-    }).addTo(map);
+    // ภาษาไทย
+    const thaiText = {
+      noData: "ไม่มีข้อมูล",
+      loading: "กำลังโหลดข้อมูล...",
+      errorLoadFile: "เกิดข้อผิดพลาดในการโหลดไฟล์:",
+      errorParseFile: "เกิดข้อผิดพลาดในการอ่านไฟล์:",
+      unknownPlace: "ไม่ทราบสถานที่",
+      magnitude: "ขนาด",
+      depth: "ความลึก",
+      time: "เวลา",
+      coordinates: "พิกัด",
+      details: "รายละเอียด",
+      buoy: "ทุ่นสึนามิ",
+      description: "คำอธิบาย",
+      graph: "กราฟ"
+    };
 
+    // เริ่มต้นแผนที่
+    const map = L.map('map', {
+      preferCanvas: true
+    }).setView([9.4, 94.4], 6);
+    
+    // ชนิดแผนที่
+    const baseLayers = {
+      "osm": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }),
+      "google-hybrid": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { 
+        maxZoom: 19,
+        attribution: 'Map data © Google'
+      })
+    };
+    
+    // เพิ่มแผนที่เริ่มต้น
+    baseLayers.osm.addTo(map);
+    
+    // สร้างกลุ่ม marker
+    const markerCluster = L.markerClusterGroup({
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      maxClusterRadius: 80
+    });
+    map.addLayer(markerCluster);
+    
+    // ไอคอนแผ่นดินไหว
     const quakeIcon = L.icon({
       iconUrl: 'https://maphub.net/media/markers/b/mo/bmoqwdmaegtllls8/80.png',
       iconSize: [30, 30],
       iconAnchor: [15, 30],
       popupAnchor: [0, -30]
     });
-
+    
+    // ไอคอนทุ่นสึนามิ
+    const tsunamiIcon = L.icon({
+      iconUrl: 'https://maphub.net/media/markers/3/ge/3geqzkryfqwmgmiu/80.png',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30]
+    });
+    
+    // ข้อมูลทุ่นสึนามิ
+    const tsunamiBuoys = [
+      {
+        lat: 8.86000,
+        lng: 88.55000,
+        name: "ทุ่นสึนามิ 23401",
+        description: "มหาสมุทรอินเดีย ห่างจากภูเก็ต 1000 กม.",
+        graph: "https://www.ndbc.noaa.gov/plot?station=23401&meas=hght&uom=M&width=1000&height=550"
+      },
+      {
+        lat: 9.54100,
+        lng: 95.66800,
+        name: "ทุ่นสึนามิ 23461",
+        description: "ตอนเหนือของหมู่เกาะอันดามัน",
+        graph: "https://www.ndbc.noaa.gov/plot?station=23461&meas=hght&uom=M&width=1000&height=550"
+      }
+    ];
+    
+    // กลุ่ม marker สำหรับทุ่นสึนามิ
+    const tsunamiLayer = L.layerGroup();
+    map.addLayer(tsunamiLayer);
+    
+    // องค์ประกอบ DOM
     const eventList = document.getElementById("event-list");
+    const fileInput = document.getElementById("fileInput");
+    const mapTypeSelect = document.getElementById("map-type");
+    const loadingElement = document.getElementById("loading");
+    const toggleSidebarBtn = document.getElementById("toggle-sidebar");
+    
+    // องค์ประกอบสถิติ
+    const totalEventsElement = document.getElementById("total-events");
+    const maxMagnitudeElement = document.getElementById("max-magnitude");
+    const avgDepthElement = document.getElementById("avg-depth");
+    const lastUpdateElement = document.getElementById("last-update");
+    
+    // ข้อมูล
+    let allEarthquakes = [];
+    let currentEarthquakes = [];
     let markers = [];
-
+    
+    // เปลี่ยนชนิดแผนที่
+    mapTypeSelect.addEventListener('change', function() {
+      const selectedLayer = this.value;
+      Object.values(baseLayers).forEach(layer => layer.remove());
+      baseLayers[selectedLayer].addTo(map);
+    });
+    
+    // ล้างข้อมูลทั้งหมด
     function clearAll() {
-      markers.forEach(m => map.removeLayer(m));
+      markerCluster.clearLayers();
+      tsunamiLayer.clearLayers(); // ล้างทุ่นสึนามิด้วย
       markers = [];
       eventList.innerHTML = "";
+      allEarthquakes = [];
+      currentEarthquakes = [];
+      updateStats();
+      addTsunamiBuoys(); // เพิ่มทุ่นสึนามิกลับหลังจากล้าง
     }
-
+    
+    // แสดงตัวโหลด
+    function showLoading() {
+      loadingElement.style.display = 'block';
+      loadingElement.textContent = thaiText.loading;
+      eventList.innerHTML = '';
+    }
+    
+    // ซ่อนตัวโหลด
+    function hideLoading() {
+      loadingElement.style.display = 'none';
+    }
+    
+    // จัดรูปแบบเวลา
+    function formatTime(timeStr) {
+      if (!timeStr) return thaiText.noData;
+      try {
+        const date = new Date(timeStr);
+        return isNaN(date) ? timeStr : date.toLocaleString('th-TH');
+      } catch (e) {
+        return timeStr;
+      }
+    }
+    
+    // สร้าง Popup สำหรับแผ่นดินไหว
+    function createPopupContent(event) {
+      const magClass = `magnitude-${Math.floor(event.mag)}`;
+      
+      return `
+        <div class="popup-content">
+          <h4>${event.region || thaiText.unknownPlace}</h4>
+          <div class="popup-detail">
+            <p><strong>ID:</strong> ${event.id || '-'}</p>
+            <p><strong>${thaiText.time}:</strong> ${formatTime(event.time)}</p>
+            <p><strong>${thaiText.magnitude}:</strong> <span class="${magClass}">${event.mag.toFixed(1)}</span> ML</p>
+            <p><strong>${thaiText.depth}:</strong> ${event.depth.toFixed(1)} กม.</p>
+            <p><strong>${thaiText.coordinates}:</strong> ${event.lat.toFixed(3)}°N, ${event.lng.toFixed(3)}°E</p>
+            ${event.detail ? `<p><strong>${thaiText.details}:</strong> ${event.detail}</p>` : ''}
+          </div>
+        </div>
+      `;
+    }
+    
+    // สร้าง Popup สำหรับทุ่นสึนามิ
+    function createTsunamiPopupContent(buoy) {
+      return `
+        <div class="popup-content">
+          <h4>${buoy.name}</h4>
+          <div class="popup-detail">
+            <p><strong>${thaiText.buoy}:</strong> ${buoy.name}</p>
+            <p><strong>${thaiText.description}:</strong> ${buoy.description}</p>
+            <p><strong>${thaiText.coordinates}:</strong> ${buoy.lat.toFixed(3)}°N, ${buoy.lng.toFixed(3)}°E</p>
+            <p><a href="${buoy.graph}" target="_blank">ดูกราฟข้อมูล</a></p>
+          </div>
+        </div>
+      `;
+    }
+    
+    // เพิ่มทุ่นสึนามิลงบนแผนที่
+    function addTsunamiBuoys() {
+      tsunamiBuoys.forEach(buoy => {
+        const marker = L.marker([buoy.lat, buoy.lng], { 
+          icon: tsunamiIcon,
+          riseOnHover: true
+        }).bindPopup(createTsunamiPopupContent(buoy));
+        tsunamiLayer.addLayer(marker);
+      });
+    }
+    
+    // อ่านไฟล์ Excel
+    async function parseExcel(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            // ตรวจสอบว่าเป็นรูปแบบที่ถูกต้อง
+            if (jsonData.length < 2) {
+              throw new Error('ไฟล์ Excel ไม่มีข้อมูล');
+            }
+            
+            // ดึง header
+            const headers = jsonData[0].map(h => h.trim().toLowerCase());
+            
+            // แปลงข้อมูล
+            const earthquakes = jsonData.slice(1).map(row => {
+              const obj = {};
+              headers.forEach((header, i) => {
+                if (row[i] !== undefined) {
+                  obj[header] = row[i];
+                }
+              });
+              
+              return {
+                id: obj['ref. id'] || obj['id'] || null,
+                time: obj['date-time thai'] || obj['date'] || obj['time'] || null,
+                lat: parseFloat(obj['lat.'] || obj['lat'] || 0),
+                lng: parseFloat(obj['long.'] || obj['lng'] || obj['lon'] || 0),
+                mag: parseFloat(obj['mag.'] || obj['mag'] || 0),
+                depth: parseFloat(obj['depth.'] || obj['depth'] || 0),
+                region: obj['region.'] || obj['region'] || thaiText.unknownPlace,
+                detail: obj['detail'] || null
+              };
+            }).filter(eq => !isNaN(eq.lat) && !isNaN(eq.lng));
+            
+            resolve(earthquakes);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        reader.onerror = function(error) {
+          reject(error);
+        };
+        
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    
+    // อ่านไฟล์เป็นข้อความ
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = e => reject(e.target.error);
+        reader.readAsText(file);
+      });
+    }
+    
+    // อ่านไฟล์ประเภทอื่น (XML, GeoJSON, KML, CSV)
+    async function parseFile(content, type) {
+      try {
+        let earthquakes = [];
+        
+        if (type === 'xml') {
+          earthquakes = parseXML(content);
+        } else if (type === 'geojson') {
+          earthquakes = parseGeoJSON(content);
+        } else if (type === 'kml') {
+          earthquakes = parseKML(content);
+        } else if (type === 'csv') {
+          earthquakes = parseCSV(content);
+        } else if (type === 'json') {
+          earthquakes = JSON.parse(content);
+        }
+        
+        // เพิ่ม unique ID ถ้าไม่มี
+        earthquakes.forEach((eq, index) => {
+          if (!eq.id) eq.id = `EQ-${Date.now()}-${index}`;
+          if (typeof eq.mag === 'string') eq.mag = parseFloat(eq.mag) || 0;
+          if (typeof eq.depth === 'string') eq.depth = parseFloat(eq.depth) || 0;
+        });
+        
+        return earthquakes;
+      } catch (error) {
+        console.error(thaiText.errorParseFile, error);
+        throw error;
+      }
+    }
+    
+    // อ่าน XML
     function parseXML(content) {
       const parser = new DOMParser();
       const xml = parser.parseFromString(content, "text/xml");
       const rows = [...xml.getElementsByTagName("Row")].slice(1);
+      
       return rows.map(row => {
         const cells = row.getElementsByTagName("Cell");
         return {
-          id: cells[1]?.textContent,
-          time: cells[3]?.textContent,
-          lat: parseFloat(cells[4]?.textContent),
-          lng: parseFloat(cells[5]?.textContent),
-          mag: parseFloat(cells[6]?.textContent),
-          depth: parseFloat(cells[7]?.textContent),
-          region: cells[9]?.textContent,
-          detail: cells[11]?.textContent
+          id: cells[1]?.textContent?.trim() || null,
+          time: cells[3]?.textContent?.trim() || null,
+          lat: parseFloat(cells[4]?.textContent) || 0,
+          lng: parseFloat(cells[5]?.textContent) || 0,
+          mag: parseFloat(cells[6]?.textContent) || 0,
+          depth: parseFloat(cells[7]?.textContent) || 0,
+          region: cells[9]?.textContent?.trim() || thaiText.unknownPlace,
+          detail: cells[11]?.textContent?.trim() || null
         };
-      }).filter(e => e.id && !isNaN(e.lat) && !isNaN(e.lng));
+      }).filter(e => !isNaN(e.lat) && !isNaN(e.lng));
     }
-
-    function renderEvents(data) {
-      clearAll();
-      data.sort((a, b) => new Date(b.time) - new Date(a.time));
-      data.forEach(eq => {
-        const marker = L.marker([eq.lat, eq.lng], { icon: quakeIcon }).addTo(map)
-          .bindPopup(`<strong>${eq.id}</strong><br>${eq.region}<br>เวลา: ${eq.time}<br>ขนาด: ${eq.mag} ML<br>ลึก: ${eq.depth} กม.<br>${eq.detail}`);
-        markers.push(marker);
-
-        const div = document.createElement("div");
-        div.className = "event-item";
-        div.innerHTML = `<div class="event-title">${eq.region} (${eq.mag} ML)</div><div class="event-time">${eq.time}</div>`;
-        div.onclick = () => {
-          map.setView([eq.lat, eq.lng], 9);
-          marker.openPopup();
+    
+    // อ่าน GeoJSON
+    function parseGeoJSON(content) {
+      const geo = JSON.parse(content);
+      return geo.features.map(f => {
+        const p = f.properties;
+        const coordinates = f.geometry.coordinates;
+        
+        return {
+          id: p.id || p.ID || null,
+          time: p.time || p.datetime || p.date || null,
+          lat: coordinates[1] || 0,
+          lng: coordinates[0] || 0,
+          mag: p.mag || p.magnitude || 0,
+          depth: p.depth || 0,
+          region: p.region || p.place || p.location || thaiText.unknownPlace,
+          detail: p.detail || p.comment || null
         };
-        eventList.appendChild(div);
       });
     }
-
-    document.getElementById("fileInput").addEventListener("change", (e) => {
+    
+    // อ่าน KML
+    function parseKML(content) {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(content, "text/xml");
+      const placemarks = [...xml.getElementsByTagName("Placemark")];
+      
+      return placemarks.map(p => {
+        const name = p.getElementsByTagName("name")[0]?.textContent?.trim() || null;
+        const desc = p.getElementsByTagName("description")[0]?.textContent?.trim() || null;
+        const coords = p.getElementsByTagName("coordinates")[0]?.textContent?.trim().split(',') || [0, 0];
+        
+        // หาขนาดจาก description
+        let mag = 0;
+        if (desc) {
+          const magMatch = desc.match(/Magnitude:? (\d+\.?\d*)/i);
+          if (magMatch) mag = parseFloat(magMatch[1]);
+        }
+        
+        return {
+          id: name,
+          time: null,
+          lat: parseFloat(coords[1]) || 0,
+          lng: parseFloat(coords[0]) || 0,
+          mag: mag,
+          depth: 0,
+          region: name,
+          detail: desc
+        };
+      });
+    }
+    
+    // อ่าน CSV
+    function parseCSV(content) {
+      const lines = content.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      return lines.slice(1).map(line => {
+        const values = line.split(',');
+        const obj = {};
+        
+        headers.forEach((header, i) => {
+          if (values[i]) {
+            obj[header.toLowerCase()] = values[i].trim();
+          }
+        });
+        
+        return {
+          id: obj['ref. id'] || obj['id'] || null,
+          time: obj['date-time thai'] || obj['date'] || obj['time'] || null,
+          lat: parseFloat(obj['lat.'] || obj['lat'] || 0),
+          lng: parseFloat(obj['long.'] || obj['lng'] || obj['lon'] || 0),
+          mag: parseFloat(obj['mag.'] || obj['mag'] || 0),
+          depth: parseFloat(obj['depth.'] || obj['depth'] || 0),
+          region: obj['region.'] || obj['region'] || thaiText.unknownPlace,
+          detail: obj['detail'] || null
+        };
+      });
+    }
+    
+    // อัพเดตสถิติ
+    function updateStats() {
+      totalEventsElement.textContent = currentEarthquakes.length;
+      
+      if (currentEarthquakes.length > 0) {
+        const maxMag = Math.max(...currentEarthquakes.map(e => e.mag));
+        const avgDepth = currentEarthquakes.reduce((sum, e) => sum + e.depth, 0) / currentEarthquakes.length;
+        const latestEvent = currentEarthquakes[0];
+        
+        maxMagnitudeElement.textContent = maxMag.toFixed(1);
+        avgDepthElement.textContent = avgDepth.toFixed(1) + ' กม.';
+        lastUpdateElement.textContent = formatTime(latestEvent.time);
+      } else {
+        maxMagnitudeElement.textContent = '-';
+        avgDepthElement.textContent = '-';
+        lastUpdateElement.textContent = '-';
+      }
+    }
+    
+    // แสดงข้อมูลแผ่นดินไหว
+    function renderEvents(data) {
+      showLoading();
+      
+      // ล้างข้อมูลเก่า
+      markerCluster.clearLayers();
+      eventList.innerHTML = "";
+      
+      // เก็บข้อมูลปัจจุบัน
+      currentEarthquakes = data;
+      
+      // เพิ่ม marker บนแผนที่
+      data.forEach((eq, index) => {
+        const magClass = `magnitude-${Math.floor(eq.mag)}`;
+        
+        const marker = L.marker([eq.lat, eq.lng], { 
+          icon: quakeIcon,
+          riseOnHover: true
+        }).bindPopup(createPopupContent(eq));
+        
+        markerCluster.addLayer(marker);
+        markers.push(marker);
+        
+        // เพิ่มในรายการ
+        const div = document.createElement("div");
+        div.className = "event-item";
+        div.dataset.index = index;
+        div.innerHTML = `
+          <div style="display: flex; align-items: center;">
+            <div class="event-magnitude ${magClass}">${eq.mag.toFixed(1)}</div>
+            <div>
+              <div class="event-title">${eq.region || thaiText.unknownPlace}</div>
+              <div class="event-time">${formatTime(eq.time)}</div>
+            </div>
+          </div>
+        `;
+        
+        div.addEventListener('click', () => {
+          // ไฮไลท์รายการที่เลือก
+          document.querySelectorAll('.event-item').forEach(item => {
+            item.classList.remove('active');
+          });
+          div.classList.add('active');
+          
+          // เลื่อนแผนที่และแสดง Popup
+          map.setView([eq.lat, eq.lng], 9);
+          marker.openPopup();
+        });
+        
+        eventList.appendChild(div);
+      });
+      
+      // ปรับมุมมองแผนที่ถ้ามีข้อมูล
+      if (data.length > 0) {
+        const bounds = L.latLngBounds(data.map(e => [e.lat, e.lng]));
+        map.fitBounds(bounds.pad(0.1));
+      }
+      
+      updateStats();
+      hideLoading();
+    }
+    
+    // อ่านไฟล์จาก input
+    fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = parseXML(reader.result);
-          if (!data || data.length === 0) throw new Error("ไม่มีข้อมูล");
-          renderEvents(data);
-        } catch (err) {
-          alert("เกิดข้อผิดพลาด: " + err.message);
+      
+      try {
+        showLoading();
+        let earthquakes = [];
+        
+        // ตรวจสอบประเภทไฟล์
+        const fileType = file.name.split('.').pop().toLowerCase();
+        
+        if (fileType === 'xls' || fileType === 'xlsx') {
+          earthquakes = await parseExcel(file);
+        } else if (fileType === 'csv' || fileType === 'kml' || fileType === 'xml') {
+          const content = await readFileAsText(file);
+          earthquakes = await parseFile(content, fileType);
+        } else if (fileType === 'json' || fileType === 'geojson') {
+          const content = await readFileAsText(file);
+          earthquakes = await parseFile(content, fileType);
+        } else {
+          alert('รูปแบบไฟล์ไม่รองรับ: ' + fileType);
+          return;
         }
-      };
-      reader.readAsText(file, "utf-8");
+        
+        allEarthquakes = earthquakes;
+        renderEvents(allEarthquakes);
+      } catch (error) {
+        console.error(thaiText.errorParseFile, error);
+        alert(thaiText.errorParseFile + ' ' + error.message);
+      } finally {
+        hideLoading();
+      }
     });
-
-    document.getElementById("urlInput").addEventListener("change", (e) => {
-      const url = e.target.value.trim();
-      if (!url) return;
-      fetch(url)
-        .then(res => res.text())
-        .then(txt => {
-          const data = parseXML(txt);
-          if (!data.length) throw new Error("ไม่มีข้อมูล");
-          renderEvents(data);
-        })
-        .catch(err => alert("โหลด URL ไม่สำเร็จ: " + err));
+    
+    // ปุ่มซ่อน/แสดง sidebar บนมือถือ
+    toggleSidebarBtn.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('expanded');
+      toggleSidebarBtn.textContent = sidebar.classList.contains('expanded') ? '▼ ซ่อนรายการ ▼' : '▲ แสดงรายการ ▲';
     });
+    
+    // เริ่มต้นแอปพลิเคชัน
+    function init() {
+      // โหลดจาก URL hash ถ้ามี
+      if (window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        if (hash.startsWith('http')) {
+          fileInput.value = decodeURIComponent(hash);
+        }
+      }
+      // เพิ่มทุ่นสึนามิเมื่อเริ่มต้น
+      addTsunamiBuoys();
+    }
+    
+    // เริ่มทำงาน
+    init();
   </script>
 </body>
 </html>
