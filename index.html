@@ -289,6 +289,7 @@
       coordinates: "พิกัด",
       details: "รายละเอียด",
       buoy: "ทุ่นสึนามิ",
+      station: "สถานีตรวจวัด",
       description: "คำอธิบาย",
       graph: "กราฟ"
     };
@@ -338,6 +339,14 @@
       popupAnchor: [0, -30]
     });
     
+    // ไอคอนสถานีตรวจวัด
+    const stationIcon = L.icon({
+      iconUrl: 'https://maphub.net/media/markers/5/ub/5ub2ccvazhf9fpb4/80.png',
+      iconSize: [30, 30],
+      iconAnchor: [15, 30],
+      popupAnchor: [0, -30]
+    });
+    
     // ข้อมูลทุ่นสึนามิ
     const tsunamiBuoys = [
       {
@@ -356,9 +365,66 @@
       }
     ];
     
+    // ข้อมูลสถานีตรวจวัดแผ่นดินไหว
+    const seismicStations = [
+      {
+        lat: 19.31430,
+        lng: 97.96336,
+        name: "สถานีตรวจวัดแผ่นดินไหวแม่ฮ่องสอน",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดแม่ฮ่องสอน",
+        graph: "https://earthquake.tmd.go.th/wave/wave_MHIT.png"
+      },
+      {
+        lat: 18.81408,
+        lng: 98.94454,
+        name: "สถานีตรวจวัดแผ่นดินไหวเชียงใหม่",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดเชียงใหม่",
+        graph: "https://earthquake.tmd.go.th/wave/wave_CMMT.png"
+      },
+      {
+        lat: 19.28367,
+        lng: 100.91134,
+        name: "สถานีตรวจวัดแผ่นดินไหวน่าน",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดน่าน",
+        graph: "https://earthquake.tmd.go.th/wave/wave_NAN.png"
+      },
+      {
+        lat: 14.39185,
+        lng: 99.12236,
+        name: "สถานีตรวจวัดแผ่นดินไหวกาญจนบุรี",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดกาญจนบุรี",
+        graph: "https://earthquake.tmd.go.th/wave/wave_SRDT.png"
+      },
+      {
+        lat: 9.38955,
+        lng: 98.47720,
+        name: "สถานีตรวจวัดแผ่นดินไหวระนอง",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดระนอง",
+        graph: "https://earthquake.tmd.go.th/wave/wave_RNTT.png"
+      },
+      {
+        lat: 8.95710,
+        lng: 98.79523,
+        name: "สถานีตรวจวัดแผ่นดินไหวสุราษฎร์ธานี",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดสุราษฎร์ธานี",
+        graph: "https://earthquake.tmd.go.th/wave/wave_SURT.png"
+      },
+      {
+        lat: 7.89195,
+        lng: 98.33515,
+        name: "สถานีตรวจวัดแผ่นดินไหวภูเก็ต",
+        description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดภูเก็ต",
+        graph: "https://earthquake.tmd.go.th/wave/wave_PKDT.png"
+      }
+    ];
+    
     // กลุ่ม marker สำหรับทุ่นสึนามิ
     const tsunamiLayer = L.layerGroup();
     map.addLayer(tsunamiLayer);
+    
+    // กลุ่ม marker สำหรับสถานีตรวจวัด
+    const stationLayer = L.layerGroup();
+    map.addLayer(stationLayer);
     
     // องค์ประกอบ DOM
     const eventList = document.getElementById("event-list");
@@ -388,13 +454,15 @@
     // ล้างข้อมูลทั้งหมด
     function clearAll() {
       markerCluster.clearLayers();
-      tsunamiLayer.clearLayers(); // ล้างทุ่นสึนามิด้วย
+      tsunamiLayer.clearLayers();
+      stationLayer.clearLayers();
       markers = [];
       eventList.innerHTML = "";
       allEarthquakes = [];
       currentEarthquakes = [];
       updateStats();
-      addTsunamiBuoys(); // เพิ่มทุ่นสึนามิกลับหลังจากล้าง
+      addTsunamiBuoys();
+      addSeismicStations();
     }
     
     // แสดงตัวโหลด
@@ -454,6 +522,21 @@
       `;
     }
     
+    // สร้าง Popup สำหรับสถานีตรวจวัด
+    function createStationPopupContent(station) {
+      return `
+        <div class="popup-content">
+          <h4>${station.name}</h4>
+          <div class="popup-detail">
+            <p><strong>${thaiText.station}:</strong> ${station.name}</p>
+            <p><strong>${thaiText.description}:</strong> ${station.description}</p>
+            <p><strong>${thaiText.coordinates}:</strong> ${station.lat.toFixed(3)}°N, ${station.lng.toFixed(3)}°E</p>
+            <p><a href="${station.graph}" target="_blank">ดูกราฟข้อมูล</a></p>
+          </div>
+        </div>
+      `;
+    }
+    
     // เพิ่มทุ่นสึนามิลงบนแผนที่
     function addTsunamiBuoys() {
       tsunamiBuoys.forEach(buoy => {
@@ -462,6 +545,17 @@
           riseOnHover: true
         }).bindPopup(createTsunamiPopupContent(buoy));
         tsunamiLayer.addLayer(marker);
+      });
+    }
+    
+    // เพิ่มสถานีตรวจวัดลงบนแผนที่
+    function addSeismicStations() {
+      seismicStations.forEach(station => {
+        const marker = L.marker([station.lat, station.lng], { 
+          icon: stationIcon,
+          riseOnHover: true
+        }).bindPopup(createStationPopupContent(station));
+        stationLayer.addLayer(marker);
       });
     }
     
@@ -793,8 +887,9 @@
           fileInput.value = decodeURIComponent(hash);
         }
       }
-      // เพิ่มทุ่นสึนามิเมื่อเริ่มต้น
+      // เพิ่มทุ่นสึนามิและสถานีตรวจวัดเมื่อเริ่มต้น
       addTsunamiBuoys();
+      addSeismicStations();
     }
     
     // เริ่มทำงาน
