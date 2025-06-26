@@ -16,6 +16,7 @@
       --text-light: #ffffff;
       --text-dark: #333333;
       --bg-light: #f2f6fa;
+      --graph-bg: #e6f0fa;
     }
 
     body {
@@ -202,25 +203,60 @@
       }
     }
 
-    /* Popup styles */
-    .popup-content {
-      min-width: 200px;
+    /* Image styles for seismic station graphs */
+    .popup-content .graph-frame {
+      position: relative;
+      width: 100%;
+      margin-top: 10px;
+      background-color: var(--graph-bg);
+      border: 2px solid rgba(0, 92, 151, 0.2);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: all 0.3s ease;
     }
 
-    .popup-content h4 {
-      margin-top: 0;
-      color: var(--primary-color);
-      border-bottom: 1px solid #eee;
-      padding-bottom: 5px;
+    .popup-content .graph-frame:hover {
+      box-shadow: 0 4px 8px rgba(0, 92, 151, 0.3);
+      transform: scale(1.02);
+      border-color: rgba(0, 92, 151, 0.5);
     }
 
-    .popup-detail p {
-      margin: 5px 0;
+    .popup-content .graph-frame a {
+      display: block;
+      width: 100%;
+      height: 100%;
+      text-decoration: none;
     }
 
-    .popup-detail strong {
-      display: inline-block;
-      width: 70px;
+    .popup-content .graph-frame img {
+      width: 100%;
+      height: 100%;
+      border: none;
+      object-fit: contain;
+      transition: opacity 0.3s ease;
+    }
+
+    .popup-content .graph-frame a:hover img {
+      opacity: 0.8; /* เปลี่ยนความโปร่งใสเมื่อ hover */
+    }
+
+    .popup-content .graph-caption {
+      font-size: 0.8rem;
+      color: #1a3c5a;
+      text-align: center;
+      margin-top: 5px;
+      transition: color 0.3s ease, transform 0.3s ease;
+    }
+
+    .popup-content .graph-frame:hover .graph-caption {
+      color: var(--accent-color);
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+      .popup-content .graph-frame img {
+        max-height: 150px;
+      }
     }
   </style>
 </head>
@@ -531,7 +567,13 @@
             <p><strong>${thaiText.station}:</strong> ${station.name}</p>
             <p><strong>${thaiText.description}:</strong> ${station.description}</p>
             <p><strong>${thaiText.coordinates}:</strong> ${station.lat.toFixed(3)}°N, ${station.lng.toFixed(3)}°E</p>
-            <p><a href="${station.graph}" target="_blank">ดูกราฟข้อมูล</a></p>
+            <p><strong>${thaiText.graph}:</strong></p>
+            <div class="graph-frame">
+              <a href="${station.graph}" target="_blank">
+                <img src="${station.graph}" alt="${station.name} Graph">
+              </a>
+            </div>
+            <div class="graph-caption">${station.name} - กราฟข้อมูล</div>
           </div>
         </div>
       `;
@@ -554,7 +596,9 @@
         const marker = L.marker([station.lat, station.lng], { 
           icon: stationIcon,
           riseOnHover: true
-        }).bindPopup(createStationPopupContent(station));
+        }).bindPopup(createStationPopupContent(station), {
+          maxWidth: 300
+        });
         stationLayer.addLayer(marker);
       });
     }
