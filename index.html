@@ -565,16 +565,12 @@
         <div class="popup-content">
           <h4>${station.name}</h4>
           <div class="popup-detail">
-            <p><strong>${thaiText.station}:</strong> ${station.name}</p>
-            <p><strong>${thaiText.description}:</strong> ${station.description}</p>
             <p><strong>${thaiText.coordinates}:</strong> ${station.lat.toFixed(3)}°N, ${station.lng.toFixed(3)}°E</p>
-            <p><strong>${thaiText.graph}:</strong></p>
             <div class="graph-frame">
               <a href="${station.graph}" target="_blank">
                 <img src="${station.graph}" alt="${station.name} Graph">
               </a>
             </div>
-            <div class="graph-caption">${station.name} - กราฟข้อมูล</div>
           </div>
         </div>
       `;
