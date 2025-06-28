@@ -815,7 +815,7 @@
       }
     }
     
-    // แสดงข้อมูลแผ่นดินไหว
+    // แสดงข้อมูลแผ่นดินไหว (แก้ไขแล้ว)
     function renderEvents(data) {
       showLoading();
       
@@ -823,11 +823,18 @@
       markerCluster.clearLayers();
       eventList.innerHTML = "";
       
-      // เก็บข้อมูลปัจจุบัน
-      currentEarthquakes = data;
+      // เรียงลำดับข้อมูลตามเวลา (จากใหม่ไปเก่า)
+      const sortedData = [...data].sort((a, b) => {
+        const timeA = a.time ? new Date(a.time).getTime() : 0;
+        const timeB = b.time ? new Date(b.time).getTime() : 0;
+        return timeB - timeA;
+      });
+      
+      // เก็บข้อมูลปัจจุบัน (เรียงลำดับแล้ว)
+      currentEarthquakes = sortedData;
       
       // เพิ่ม marker บนแผนที่
-      data.forEach((eq, index) => {
+      sortedData.forEach((eq, index) => {
         const magClass = `magnitude-${Math.floor(eq.mag)}`;
         const cleanId = eq.id ? eq.id.replace('TM', '') : '-';
 
@@ -870,8 +877,8 @@
       });
       
       // ปรับมุมมองแผนที่ถ้ามีข้อมูล
-      if (data.length > 0) {
-        const bounds = L.latLngBounds(data.map(e => [e.lat, e.lng]));
+      if (sortedData.length > 0) {
+        const bounds = L.latLngBounds(sortedData.map(e => [e.lat, e.lng]));
         map.fitBounds(bounds.pad(0.1));
       }
       
