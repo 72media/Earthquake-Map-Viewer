@@ -179,6 +179,19 @@
       background: var(--primary-color);
     }
 
+    /* สไตล์สำหรับเส้นทาง GPX */
+    .gpx-route {
+      stroke: #3f51b5;
+      stroke-width: 4;
+      stroke-opacity: 0.8;
+      fill: none;
+    }
+    
+    .gpx-route:hover {
+      stroke: #ff5722;
+      stroke-width: 5;
+    }
+
     @media (max-width: 768px) {
       #sidebar {
         width: 100%;
@@ -263,65 +276,64 @@
 <body>
   <div id="sidebar">
     <center><h1>รายการแผ่นดินไหว</h1></center>
-    <!-- ด้านใน <body> -->
-<div id="sidebar">
-  <!-- 🔽 กล่องข้อมูลธรณีวิทยา -->
-  <div class="info-box" style="background-color: rgba(255,255,255,0.1); padding: 1rem; border-left: 1px solid #ff9800; border-radius: 8px; margin-bottom: 1rem;">
-    <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
-      🌍 พื้นที่นี้อยู่บนแนวรอยต่อของแผ่นเปลือกโลก ซึ่ง <strong>แผ่นอินเดีย (Indian Plate)</strong> กำลัง
-      <strong>มุดตัว (Subduction)</strong> ใต้ <strong>แผ่นพม่า-อันดามัน (Burma/Andaman Plate)</strong> ทำให้เกิด
-      <span style="color: #ffc107;">แผ่นดินไหวบ่อยครั้ง</span>โปรดติดตามข้อมูลจาก <strong>กรมอุตุฯ</strong>อย่าเชื่อข่าวลือ
-    </p>
-  </div>
-  <!-- 🔽 ส่วนควบคุมแผนที่ (ยังคงอยู่ครบ) -->
-  <div class="map-controls">
-    <div class="control-group">
-      <label>เลือกชนิดแผนที่:</label>
-      <select id="map-type">
-        <option value="osm">แผนที่มาตรฐาน (OSM)</option>
-        <option value="google-hybrid">แผนที่ Google Hybrid</option>
-      </select>
+    <div class="info-box" style="background-color: rgba(255,255,255,0.1); padding: 1rem; border-left: 1px solid #ff9800; border-radius: 8px; margin-bottom: 1rem;">
+      <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
+        🌍 พื้นที่นี้อยู่บนแนวรอยต่อของแผ่นเปลือกโลก ซึ่ง <strong>แผ่นอินเดีย (Indian Plate)</strong> กำลัง
+        <strong>มุดตัว (Subduction)</strong> ใต้ <strong>แผ่นพม่า-อันดามัน (Burma/Andaman Plate)</strong> ทำให้เกิด
+        <span style="color: #ffc107;">แผ่นดินไหวบ่อยครั้ง</span>โปรดติดตามข้อมูลจาก <strong>กรมอุตุฯ</strong>อย่าเชื่อข่าวลือ
+      </p>
     </div>
     
-    <div class="control-group">
-      <label>เลือกไฟล์ข้อมูล:</label>
-      <input type="file" id="fileInput" accept=".xls,.xlsx,.xml,.geojson,.kml,.csv,.json">
+    <div class="map-controls">
+      <div class="control-group">
+        <label>เลือกชนิดแผนที่:</label>
+        <select id="map-type">
+          <option value="osm">แผนที่มาตรฐาน (OSM)</option>
+          <option value="google-hybrid">แผนที่ Google Hybrid</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label>เลือกไฟล์ข้อมูลแผ่นดินไหว:</label>
+        <input type="file" id="fileInput" accept=".xls,.xlsx,.xml,.geojson,.kml,.csv,.json">
+      </div>
+      
+      <div class="control-group">
+        <label>เลือกไฟล์เส้นทาง GPX:</label>
+        <input type="file" id="gpxInput" accept=".gpx">
+      </div>
+      
+      <div class="control-group">
+        <label>แสดงแนวรอยเลื่อน:</label>
+        <button id="toggle-faults">แสดงแนวรอยเลื่อน</button>
+      </div>
+      
+      <div class="control-group">
+        <button id="clear-data" style="width: 100%; background-color: #f44336;">ล้างข้อมูลทั้งหมด</button>
+      </div>
     </div>
-    
-    <div class="control-group">
-      <label>แสดงแนวรอยเลื่อน:</label>
-      <button id="toggle-faults">แสดงแนวรอยเลื่อน</button>
-    </div>
-  </div>
 
-  <!-- 🔽 ส่วนสถิติ -->
-  <div id="stats">
-    <div class="stat-item">
-      <span>จำนวนเหตุการณ์:</span>
-      <span id="total-events">0</span>
+    <div id="stats">
+      <div class="stat-item">
+        <span>จำนวนเหตุการณ์:</span>
+        <span id="total-events">0</span>
+      </div>
+      <div class="stat-item">
+        <span>ขนาดสูงสุด:</span>
+        <span id="max-magnitude">-</span>
+      </div>
+      <div class="stat-item">
+        <span>ความลึกเฉลี่ย:</span>
+        <span id="avg-depth">-</span>
+      </div>
+      <div class="stat-item">
+        <span>อัพเดตล่าสุด:</span>
+        <span id="last-update">-</span>
+      </div>
     </div>
-    <div class="stat-item">
-      <span>ขนาดสูงสุด:</span>
-      <span id="max-magnitude">-</span>
-    </div>
-    <div class="stat-item">
-      <span>ความลึกเฉลี่ย:</span>
-      <span id="avg-depth">-</span>
-    </div>
-    <div class="stat-item">
-      <span>อัพเดตล่าสุด:</span>
-      <span id="last-update">-</span>
-    </div>
-  </div>
 
-  <div id="loading">กำลังโหลดข้อมูล...</div>
-  <div id="event-list"></div>
-  <div id="toggle-sidebar">▲ ซ่อน/แสดงรายการ ▲</div>
-</div>  
     <div id="loading">กำลังโหลดข้อมูล...</div>
-    
     <div id="event-list"></div>
-    
     <div id="toggle-sidebar">▲ ซ่อน/แสดงรายการ ▲</div>
   </div>
   
@@ -421,7 +433,7 @@
       }
     ];
     
-    // ข้อมูลสถานีตรวจวัดแผ่นดินไหว
+     // ข้อมูลสถานีตรวจวัดแผ่นดินไหว
     const seismicStations = [
       {
         lat: 19.31430,
@@ -473,8 +485,9 @@
         graph: "https://earthquake.tmd.go.th/wave/wave_PKDT.png"
       }
     ];
+
     
-    // กลุ่ม marker สำหรับทุ่นสึnามิ
+    // กลุ่ม marker สำหรับทุ่นสึนามิ
     const tsunamiLayer = L.layerGroup();
     map.addLayer(tsunamiLayer);
     
@@ -486,13 +499,19 @@
     const faultLayer = L.layerGroup();
     map.addLayer(faultLayer);
     
+    // กลุ่มสำหรับเส้นทาง GPX
+    const gpxLayer = L.layerGroup();
+    map.addLayer(gpxLayer);
+    
     // องค์ประกอบ DOM
     const eventList = document.getElementById("event-list");
     const fileInput = document.getElementById("fileInput");
+    const gpxInput = document.getElementById("gpxInput");
     const mapTypeSelect = document.getElementById("map-type");
     const loadingElement = document.getElementById("loading");
     const toggleSidebarBtn = document.getElementById("toggle-sidebar");
     const toggleFaultsBtn = document.getElementById("toggle-faults");
+    const clearDataBtn = document.getElementById("clear-data");
     
     // องค์ประกอบสถิติ
     const totalEventsElement = document.getElementById("total-events");
@@ -697,6 +716,8 @@
         }
       ];
 
+
+
       faultLayer.clearLayers();
 
       faultData.forEach(fault => {
@@ -730,6 +751,7 @@
       tsunamiLayer.clearLayers();
       stationLayer.clearLayers();
       faultLayer.clearLayers();
+      gpxLayer.clearLayers();
       markers = [];
       eventList.innerHTML = "";
       allEarthquakes = [];
@@ -739,7 +761,12 @@
       addSeismicStations();
       faultsVisible = false;
       toggleFaultsBtn.textContent = 'แสดงแนวรอยเลื่อน';
+      fileInput.value = '';
+      gpxInput.value = '';
     }
+    
+    // เพิ่มปุ่มล้างข้อมูล
+    clearDataBtn.addEventListener('click', clearAll);
     
     // แสดงตัวโหลด
     function showLoading() {
@@ -892,6 +919,77 @@
         };
         
         reader.readAsArrayBuffer(file);
+      });
+    }
+    
+    // อ่านไฟล์ GPX (แก้ไขแล้ว)
+    function parseGPX(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          try {
+            const gpxContent = e.target.result;
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(gpxContent, "text/xml");
+            
+            // ล้าง layer GPX ก่อนเพิ่มใหม่
+            gpxLayer.clearLayers();
+            
+            // อ่านชื่อเส้นทางจากไฟล์ GPX
+            const routeName = xml.getElementsByTagName("name")[0]?.textContent || "เส้นทางที่ไม่ระบุชื่อ";
+            
+            // อ่านข้อมูลเส้นทางทั้งหมด (track segments)
+            const trksegs = xml.getElementsByTagName("trkseg");
+            
+            if (trksegs.length === 0) {
+              throw new Error('ไฟล์ GPX ไม่มีเส้นทาง');
+            }
+            
+            // สร้างเส้นทางสำหรับแต่ละ segment
+            for (let i = 0; i < trksegs.length; i++) {
+              const trkseg = trksegs[i];
+              const trkpts = trkseg.getElementsByTagName("trkpt");
+              const latlngs = [];
+              
+              for (let j = 0; j < trkpts.length; j++) {
+                const trkpt = trkpts[j];
+                const lat = parseFloat(trkpt.getAttribute("lat"));
+                const lng = parseFloat(trkpt.getAttribute("lon"));
+                latlngs.push([lat, lng]);
+              }
+              
+              // สร้างเส้นทางบนแผนที่
+              const route = L.polyline(latlngs, {
+                color: '#3f51b5',
+                weight: 4,
+                opacity: 0.8,
+                lineJoin: 'round',
+                className: 'gpx-route'
+              }).bindPopup(`<b>${routeName}</b><br>Segment ${i+1}/${trksegs.length}`);
+              
+              gpxLayer.addLayer(route);
+            }
+            
+            // ปรับมุมมองแผนที่ให้แสดงเส้นทางทั้งหมด
+            if (gpxLayer.getLayers().length > 0) {
+              const bounds = L.latLngBounds(
+                gpxLayer.getLayers().flatMap(layer => layer.getLatLngs())
+              );
+              map.fitBounds(bounds.pad(0.1));
+            }
+            
+            resolve(true);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        reader.onerror = function(error) {
+          reject(error);
+        };
+        
+        reader.readAsText(file);
       });
     }
     
@@ -1055,7 +1153,7 @@
       }
     }
     
-    // แสดงข้อมูลแผ่นดินไหว (แก้ไขแล้ว)
+    // แสดงข้อมูลแผ่นดินไหว
     function renderEvents(data) {
       showLoading();
       
@@ -1161,6 +1259,22 @@
       }
     });
     
+    // อ่านไฟล์ GPX จาก input
+    gpxInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        showLoading();
+        await parseGPX(file);
+      } catch (error) {
+        console.error(thaiText.errorParseFile, error);
+        alert(thaiText.errorParseFile + ' ' + error.message);
+      } finally {
+        hideLoading();
+      }
+    });
+    
     // ปุ่มซ่อน/แสดง sidebar บนมือถือ
     toggleSidebarBtn.addEventListener('click', () => {
       const sidebar = document.getElementById('sidebar');
@@ -1185,6 +1299,5 @@
     // เริ่มทำงาน
     init();
   </script>
-
 </body>
 </html>
