@@ -288,8 +288,9 @@
       <div class="control-group">
         <label>เลือกชนิดแผนที่:</label>
         <select id="map-type">
-          <option value="osm">แผนที่มาตรฐาน (OSM)</option>
-          <option value="google-hybrid">แผนที่ Google Hybrid</option>
+          <option value="osm">แผนที่ภูมิประเทศ (OSM)</option>
+          <option value="satellite">แผนที่ภาพถ่ายดาวเทียม</option>
+          <option value="googleHybrid">แผนที่ Google Hybrid</option>
         </select>
       </div>
       
@@ -373,9 +374,14 @@
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
       }),
-      "google-hybrid": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { 
-        maxZoom: 19,
-        attribution: 'Map data © Google'
+      "satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+      }),
+      "googleHybrid": L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        attribution: '© Google',
+        maxZoom: 20,
+        subdomains: ['mt0','mt1','mt2','mt3']
       })
     };
     
@@ -507,6 +513,7 @@
     const eventList = document.getElementById("event-list");
     const fileInput = document.getElementById("fileInput");
     const gpxInput = document.getElementById("gpxInput");
+    const kmlInput = document.getElementById("kmlInput");
     const mapTypeSelect = document.getElementById("map-type");
     const loadingElement = document.getElementById("loading");
     const toggleSidebarBtn = document.getElementById("toggle-sidebar");
@@ -820,7 +827,12 @@
             <p><strong>${thaiText.buoy}:</strong> ${buoy.name}</p>
             <p><strong>${thaiText.description}:</strong> ${buoy.description}</p>
             <p><strong>${thaiText.coordinates}:</strong> ${buoy.lat.toFixed(3)}°N, ${buoy.lng.toFixed(3)}°E</p>
-            <p><a href="${buoy.graph}" target="_blank">ดูกราฟข้อมูล</a></p>
+            <div class="graph-frame">
+              <a href="${buoy.graph}" target="_blank">
+                <img src="${buoy.graph}" alt="${buoy.name} Graph">
+              </a>
+            </div>
+            <p><a href="${buoy.graph}" target="_blank">ดูกราฟข้อมูลเต็มรูปแบบ</a></p>
           </div>
         </div>
       `;
@@ -849,7 +861,9 @@
         const marker = L.marker([buoy.lat, buoy.lng], { 
           icon: tsunamiIcon,
           riseOnHover: true
-        }).bindPopup(createTsunamiPopupContent(buoy));
+        }).bindPopup(createTsunamiPopupContent(buoy), {
+          maxWidth: 350
+        });
         tsunamiLayer.addLayer(marker);
       });
     }
@@ -1301,3 +1315,4 @@
   </script>
 </body>
 </html>
+<
