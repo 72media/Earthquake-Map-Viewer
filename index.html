@@ -1388,6 +1388,30 @@
         document.getElementById('measure-result').textContent = 'คลิกจุดต่อไปหรือกดล้างเพื่อเริ่มใหม่';
       }
     }
+ // ไอคอนกล้องวงจรปิด
+    const cctvIcon = L.icon({
+      iconUrl: "https://i.ibb.co/mf8MtwZ/camera.png",
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -28]
+    });
+
+    // เพิ่มกล้องวงจรปิดหาดป่าตอง
+    const patongCCTV = L.marker([7.891497208766432, 98.29578647367723], {
+      icon: cctvIcon,
+      title: "กล้องวงจรปิดหาดป่าตอง"
+    }).bindPopup(`
+      <div style="width: 320px; height: 240px; border: 1px solid #004b8d; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <div style="background: #004b8d; color: white; padding: 6px; font-weight: bold;">กล้องวงจรปิดหาดป่าตอง</div>
+        <iframe src="https://g3.ipcamlive.com/player/player.php?alias=6211dc3352960&amp;autoplay=1" 
+                width="100%" height="180" style="border: none;" allowfullscreen loading="lazy"></iframe>
+        <div style="text-align: center; background-color: #e3f2fd; padding: 4px; font-size: 0.85rem; color: #004b8d;">กล้องจากตึก Patong Tower</div>
+      </div>
+`);
+
+    // เพิ่มกล้องลงบนแผนที่
+    patongCCTV.addTo(map);
+
   </script>
 </body>
 </html>
