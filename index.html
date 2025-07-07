@@ -275,6 +275,10 @@
 </head>
 <body>
   <div id="sidebar">
+    <div id="thai-clock" style="background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+      <div id="thai-date" style="font-size: 0.9rem;"></div>
+      <div id="thai-time" style="font-size: 1.2rem; font-weight: bold;"></div>
+    </div>
     <center><h1>รายการแผ่นดินไหว</h1></center>
     <div class="info-box" style="background-color: rgba(255,255,255,0.1); padding: 1rem; border-left: 1px solid #ff9800; border-radius: 8px; margin-bottom: 1rem;">
       <p style="margin: 0; font-size: 0.95rem; line-height: 1.6;">
@@ -339,6 +343,11 @@
   </div>
   
   <div id="map"></div>
+  <div id="measure-controls" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 5px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.2);">
+    <button id="start-measure" style="margin-right: 5px;">วัดระยะทาง</button>
+    <button id="clear-measure">ล้าง</button>
+    <div id="measure-result" style="margin-top: 5px; font-size: 0.9rem;"></div>
+  </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
@@ -566,7 +575,7 @@
         },
         {
           name: " แผ่นพม่า-อันดามัน",
-          description: "รอยเลื่อน",
+          description: "รอยเลื่อนแบบขนาน",
           coordinates: [
             [-6.5541000, 104.9206000], [-6.3143000, 104.9058000], [-5.9845000, 104.8543000], 
             [-5.7831000, 104.7673000], [-5.4627000, 104.5750000], [-5.4392000, 104.5637000], 
@@ -676,7 +685,7 @@
         },
         {
           name: " แผ่นพม่า-อันดามัน",
-          description: "รอยเลื่อน",
+          description: "รอยเลื่อนแบบขนาน",
           coordinates: [
             [15.1982000, 96.4075000], [15.1895000, 96.2610000], [15.1857000, 96.1470000], 
             [15.1803000, 96.0415000], [15.0529000, 96.0460000], [14.8457000, 96.0470000], 
@@ -1313,8 +1322,73 @@
     // เริ่มทำงาน
     init();
 
+    // Update Thai date/time every second
+    function updateThaiDateTime() {
+      const now = new Date();
+      const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        timeZone: 'Asia/Bangkok'
+      };
+      document.getElementById('thai-date').textContent = now.toLocaleDateString('th-TH', options);
+      document.getElementById('thai-time').textContent = now.toLocaleTimeString('th-TH');
+    }
+    setInterval(updateThaiDateTime, 1000);
+    updateThaiDateTime();
 
-    // ไอคอนกล้องวงจรปิด
+    // Distance measurement
+    let measureLine = null;
+    let measurePoints = [];
+    const measureLayer = L.layerGroup().addTo(map);
+
+    document.getElementById('start-measure').addEventListener('click', () => {
+      map.on('click', measureOnClick);
+      document.getElementById('measure-result').textContent = 'คลิกบนแผนที่เพื่อเริ่มวัดระยะทาง';
+    });
+
+    document.getElementById('clear-measure').addEventListener('click', () => {
+      measureLayer.clearLayers();
+      measurePoints = [];
+      document.getElementById('measure-result').textContent = '';
+      map.off('click', measureOnClick);
+    });
+
+    function measureOnClick(e) {
+      measurePoints.push(e.latlng);
+      
+      // Draw marker
+      L.circleMarker(e.latlng, {
+        radius: 5,
+        color: '#3388ff',
+        fillColor: '#3388ff',
+        fillOpacity: 1
+      }).addTo(measureLayer);
+      
+      // Draw line if multiple points
+      if (measurePoints.length > 1) {
+        if (measureLine) {
+          measureLayer.removeLayer(measureLine);
+        }
+        measureLine = L.polyline(measurePoints, {
+          color: '#3388ff',
+          weight: 3
+        }).addTo(measureLayer);
+        
+        // Calculate total distance in km
+        let totalDistance = 0;
+        for (let i = 1; i < measurePoints.length; i++) {
+          totalDistance += measurePoints[i-1].distanceTo(measurePoints[i]) / 1000;
+        }
+        
+        document.getElementById('measure-result').textContent = 
+          `ระยะทางรวม: ${totalDistance.toFixed(2)} กม. (${measurePoints.length} จุด)`;
+      } else {
+        document.getElementById('measure-result').textContent = 'คลิกจุดต่อไปหรือกดล้างเพื่อเริ่มใหม่';
+      }
+    }
+// ไอคอนกล้องวงจรปิด
     const cctvIcon = L.icon({
       iconUrl: "https://i.ibb.co/mf8MtwZ/camera.png",
       iconSize: [32, 32],
