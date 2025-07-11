@@ -455,49 +455,49 @@
         lng: 97.96336,
         name: "สถานีตรวจวัดแผ่นดินไหวแม่ฮ่องสอน",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดแม่ฮ่องสอน",
-        graph: "https://earthquake.tmd.go.th/wave/wave_MHIT.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_MHIT.png"
       },
       {
         lat: 18.81408,
         lng: 98.94454,
         name: "สถานีตรวจวัดแผ่นดินไหวเชียงใหม่",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดเชียงใหม่",
-        graph: "https://earthquake.tmd.go.th/wave/wave_CMMT.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_CMMT.png"
       },
       {
         lat: 19.28367,
         lng: 100.91134,
         name: "สถานีตรวจวัดแผ่นดินไหวน่าน",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดน่าน",
-        graph: "https://earthquake.tmd.go.th/wave/wave_NAN.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_NAN.png"
       },
       {
         lat: 14.39185,
         lng: 99.12236,
         name: "สถานีตรวจวัดแผ่นดินไหวกาญจนบุรี",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดกาญจนบุรี",
-        graph: "https://earthquake.tmd.go.th/wave/wave_SRDT.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_SRDT.png"
       },
       {
         lat: 9.38955,
         lng: 98.47720,
         name: "สถานีตรวจวัดแผ่นดินไหวระนอง",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดระนอง",
-        graph: "https://earthquake.tmd.go.th/wave/wave_RNTT.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_RNTT.png"
       },
       {
         lat: 8.95710,
         lng: 98.79523,
         name: "สถานีตรวจวัดแผ่นดินไหวสุราษฎร์ธานี",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดสุราษฎร์ธานี",
-        graph: "https://earthquake.tmd.go.th/wave/wave_SURT.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_SURT.png"
       },
       {
         lat: 7.89195,
         lng: 98.33515,
         name: "สถานีตรวจวัดแผ่นดินไหวภูเก็ต",
         description: "สถานีตรวจวัดแผ่นดินไหวที่จังหวัดภูเก็ต",
-        graph: "https://earthquake.tmd.go.th/wave/wave_PKDT.png"
+        graph: "https://earthquake.tmd.go.th/wave/new_wave_PKDT.png"
       }
     ];
 
@@ -1409,8 +1409,22 @@
       </div>
 `);
 
+// เพิ่มกล้องวงจรปิดหาดกะรน
+    const karonCCTV = L.marker([7.829301083104591, 98.29381287736894], {
+      icon: cctvIcon,
+      title: "กล้องวงจรปิดหาดกะรน"
+    }).bindPopup(`
+      <div style="width: 320px; height: 240px; border: 2px solid #004b8d; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <div style="background: #004b8d; color: white; padding: 6px; font-weight: bold; text-align: center;">กล้องวงจรปิดหาดกะรน</div>
+        <iframe src="https://web.wltt.asia/marinahkt21-8a29e4318d/embed.html?ago=86400&token=a1c8f8adf366a02fba46f96f12ff27477790175a-7fe0e6521e22579e484345b0bd8c7000-1752236284-1752225484" 
+                width="100%" height="180" style="border: none;" allowfullscreen loading="lazy"></iframe>
+        <div style="text-align: center; background-color: #e3f2fd; padding: 4px; font-size: 0.85rem; color: #004b8d;">กล้องชายหาดกะรน </div>
+      </div>
+`);
+
     // เพิ่มกล้องลงบนแผนที่
     patongCCTV.addTo(map);
+    karonCCTV.addTo(map);
 
   </script>
 </body>
