@@ -271,7 +271,20 @@
         max-height: 150px;
       }
     }
-  </style>
+  
+.fullscreen-trigger {
+  cursor: zoom-in;
+  transition: transform 0.3s ease;
+  max-height: 400px;
+  width: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.fullscreen-trigger:hover {
+  transform: scale(1.03);
+}
+
+</style>
 </head>
 <body>
   <div id="sidebar">
@@ -856,20 +869,18 @@
     
     // สร้าง Popup สำหรับสถานีตรวจวัด
     function createStationPopupContent(station) {
-      return `
-        <div class="popup-content">
-          <h4>${station.name}</h4>
-          <div class="popup-detail">
-            <p><strong>${thaiText.coordinates}:</strong> ${station.lat.toFixed(3)}°N, ${station.lng.toFixed(3)}°E</p>
-            <div class="graph-frame">
-              <a href="${station.graph}" target="_blank">
-                <img src="${station.graph}" alt="${station.name} Graph">
-              </a>
-            </div>
-          </div>
+  return `
+    <div class="popup-content">
+      <h4>${station.name}</h4>
+      <div class="popup-detail">
+        <p><strong>${thaiText.coordinates}:</strong> ${station.lat.toFixed(3)}°N, ${station.lng.toFixed(3)}°E</p>
+        <div class="graph-frame">
+          <img src="${station.graph}" alt="${station.name} Graph" class="fullscreen-trigger">
         </div>
-      `;
-    }
+      </div>
+    </div>
+  `;
+}
     
     // เพิ่มทุ่นสึนามิลงบนแผนที่
     function addTsunamiBuoys() {
@@ -1433,6 +1444,22 @@
     patongCCTV.addTo(map);
     karonCCTV.addTo(map);
 
-  </script>
+  
+// Fullscreen Image Viewer
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('fullscreen-trigger')) {
+    document.getElementById('fullscreenImage').src = e.target.src;
+    document.getElementById('fullscreenDialog').showModal();
+  }
+});
+
+</script>
+
+<dialog id="fullscreenDialog" style="border: none; padding: 0; background: rgba(0,0,0,0.8);">
+  <button onclick="document.getElementById('fullscreenDialog').close()" 
+          style="position:absolute;top:10px;right:20px;font-size:24px;color:white;background:none;border:none;cursor:pointer;">✕</button>
+  <img id="fullscreenImage" src="" style="max-width: 90vw; max-height: 90vh; display: block; margin: auto;">
+</dialog>
+
 </body>
 </html>
