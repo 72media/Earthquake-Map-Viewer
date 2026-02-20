@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>แผนที่แผ่นดินไหว + ทุ่นสึนามิ (แก้ไขสมบูรณ์)</title>
+  <title>แผนที่แผ่นดินไหว + ทุ่นสึนามิ </title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
@@ -17,7 +17,6 @@
       --accent-color: #ff5722;
       --tmd-color: #9c27b0;
       --bg-light: #f2f6fa;
-      --text-dark: #333;
       --text-light: #fff;
       --graph-bg: #e6f0fa;
     }
@@ -32,7 +31,6 @@
       overflow: hidden;
     }
 
-    /* Sidebar Styles */
     #sidebar {
       width: 360px;
       background: linear-gradient(160deg, var(--secondary-color), var(--primary-color));
@@ -62,6 +60,31 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
+    #search-box {
+      background: rgba(0,0,0,0.2);
+      padding: 0.8rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    #search-box label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    #search-input {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: white;
+      box-sizing: border-box;
+      font-family: 'Sarabun', sans-serif;
+    }
+    #search-input::placeholder { color: rgba(255,255,255,0.5); }
+    #search-result { font-size: 0.85rem; margin-top: 0.3rem; opacity: 0.9; }
+
     .map-controls {
       background-color: rgba(0,0,0,0.2);
       padding: 1rem;
@@ -78,7 +101,7 @@
       border: 1px solid rgba(255,255,255,0.3);
       border-radius: 4px;
       background-color: rgba(255,255,255,0.1);
-      color: white;
+      color: black;
       box-sizing: border-box; 
     }
     
@@ -175,13 +198,8 @@
       border: 2px solid rgba(0, 92, 151, 0.2);
       border-radius: 6px;
       overflow: hidden;
-      transition: all 0.3s ease;
     }
-    .popup-content .graph-frame img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
+    .popup-content .graph-frame img { width: 100%; height: auto; display: block; }
     .fullscreen-trigger { cursor: zoom-in; }
     
     dialog#fullscreenDialog {
@@ -197,7 +215,6 @@
       body { flex-direction: column; }
       #sidebar { width: 100%; height: 45vh; padding: 0.5rem; box-sizing: border-box;}
       #map { height: 55vh; }
-      .sidebar-content { padding-right: 0; }
     }
   </style>
 </head>
@@ -209,6 +226,12 @@
       <div id="time-display" style="font-size: 1.4rem; font-weight: bold;">--:--:--</div>
     </div>
 
+    <div id="search-box">
+      <label for="search-input">🔍 ค้นหาชื่อสถานที่ (เช่น ไทย พม่า):</label>
+      <input type="text" id="search-input" placeholder="พิมพ์ชื่อเพื่อกรอง..." autocomplete="off">
+      <div id="search-result">แสดงทั้งหมด 0 รายการ</div>
+    </div>
+
     <div class="sidebar-content">
       <div class="map-controls">
         <div class="control-group">
@@ -218,7 +241,7 @@
         </div>
 
         <div class="control-group">
-          <label>🌊 ข้อมูลประกอบ:</label>
+          <label>🌊 ข้อมูลประกอบ (แสดงอัตโนมัติ):</label>
            <div style="font-size: 0.85rem; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 4px;">
              ✅ ทุ่นสึนามิ (2 จุด)<br>
              ✅ สถานีตรวจวัด (เนปิดอร์/ลกเซอมาเว)
@@ -258,7 +281,7 @@
 
   <dialog id="fullscreenDialog">
     <button onclick="document.getElementById('fullscreenDialog').close()" 
-            style="position:absolute;top:10px;right:20px;font-size:24px;color:white;background:none;border:none;cursor:pointer;width:auto;">✕ ปิด</button>
+            style="position:absolute;top:10px;right:20px;font-size:24px;color:red;background:none;border:none;cursor:pointer;width:auto;">✕ ปิด</button>
     <img id="fullscreenImage" src="" style="max-width: 95vw; max-height: 95vh; display: block; margin: auto; padding-top: 20px;">
   </dialog>
 
@@ -270,8 +293,10 @@
     const TMD_FEED_URL = "https://eq.tmd.go.th/feed/rss_local.xml"; 
     const USGS_FEED_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson";
     const PROXY_LIST = [
-        "https://corsproxy.io/?",
         "https://api.allorigins.win/raw?url=",
+        "https://corsproxy.io/?",
+        "https://api.codetabs.com/v1/proxy?quest=",
+        "https://cors-anywhere.herokuapp.com/",
         "https://thingproxy.freeboard.io/fetch/"
     ];
 
@@ -293,31 +318,23 @@
 
     // --- STATIC DATA ---
     const tsunamiBuoys = [
-      {
-        lat: 8.86000, lng: 88.55000, name: "ทุ่นสึนามิ 23401",
+      { lat: 8.86000, lng: 88.55000, name: "ทุ่นสึนามิ 23401",
         description: "ห่างจากเกาะภูเก็ตไปทางทิศตะวันตก เป็นระยะทาง 965 กม.",
-        graph: "https://www.ndbc.noaa.gov/plot?station=23401&meas=hght&uom=M&width=1000&height=550"
-      },
-      {
-        lat: 9.54100, lng: 95.66800, name: "ทุ่นสึนามิ 23461",
+        graph: "https://www.ndbc.noaa.gov/plot?station=23401&meas=hght&uom=M&width=1000&height=550" },
+      { lat: 9.54100, lng: 95.66800, name: "ทุ่นสึนามิ 23461",
         description: "ห่างจากเกาะภูเก็ตไปทางทิศตะวันตก เป็นระยะทาง 340 กม.",
-        graph: "https://www.ndbc.noaa.gov/plot?station=23461&meas=hght&uom=M&width=1000&height=550"
-      }
+        graph: "https://www.ndbc.noaa.gov/plot?station=23461&meas=hght&uom=M&width=1000&height=550" }
     ];
     
     const seismicStations = [
-      {
-        lat: 19.780390734463694, lng: 96.14079826383701,
+      { lat: 19.780390734463694, lng: 96.14079826383701,
         name: "สถานีตรวจวัดแผ่นดินไหวเนปิดอร์",
         description: "สถานีตรวจวัดแผ่นดินไหวที่เมียนมาร์",
-        graph: "https://geofon.gfz.de/waveform/qplot/NPW.active.png"
-      },
-      {
-        lat: 5.18388, lng: 97.1385,
+        graph: "https://geofon.gfz.de/waveform/qplot/NPW.active.png" },
+      { lat: 5.18388, lng: 97.1385,
         name: "สถานีตรวจวัดแผ่นดินไหวลกเซอมาเว",
         description: "สถานีตรวจวัดแผ่นดินไหวสุมาตราเหนือ",
-        graph: "https://geofon.gfz.de/waveform/qplot/LHMI.active.png"
-      }
+        graph: "https://geofon.gfz.de/waveform/qplot/LHMI.active.png" }
     ];
 
     // --- MAP SETUP ---
@@ -338,13 +355,15 @@
     
     map.addLayer(markerCluster);
 
+    // ตัวแปรเก็บข้อมูลแผ่นดินไหวทั้งหมดสำหรับการค้นหา
+    let allEarthquakes = [];
+
     // --- HELPER FUNCTIONS ---
     function formatThaiTime(isoDateStr) {
         if (!isoDateStr || isoDateStr === "Invalid Date") return "ไม่ระบุเวลา";
         try {
             const d = new Date(isoDateStr);
             if (isNaN(d.getTime())) return isoDateStr; 
-            
             return d.toLocaleString('th-TH', {
                 timeZone: 'Asia/Bangkok',
                 day: '2-digit', month: 'short', year: '2-digit',
@@ -424,6 +443,7 @@
 
         events.forEach(evt => {
             const linkBtn = evt.link ? `<br><a href="${evt.link}" target="_blank" class="tmd-link-btn">🔗 ดูรายละเอียดเพิ่มเติม</a>` : '';
+
             const popupContent = `
                 <div style="font-family:'Sarabun'">
                     <h4 style="margin:0;color:#005c97">${evt.place}</h4>
@@ -438,6 +458,7 @@
             const marker = L.marker([evt.lat, evt.lng], { icon: quakeIcon }).bindPopup(popupContent);
             markerCluster.addLayer(marker);
 
+            // Create Sidebar List Item
             const item = document.createElement('div');
             item.className = 'event-item';
             item.innerHTML = `
@@ -466,6 +487,19 @@
         updateStats(events);
     }
 
+    // --- ฟังก์ชันสำหรับกรองตามคำค้นหา ---
+    function filterEarthquakes(searchTerm) {
+      if (!searchTerm.trim()) {
+        renderData(allEarthquakes);
+        document.getElementById('search-result').textContent = `แสดงทั้งหมด ${allEarthquakes.length} รายการ`;
+      } else {
+        const term = searchTerm.toLowerCase().trim();
+        const filtered = allEarthquakes.filter(ev => ev.place && ev.place.toLowerCase().includes(term));
+        renderData(filtered);
+        document.getElementById('search-result').textContent = `พบ ${filtered.length} รายการ (จากทั้งหมด ${allEarthquakes.length})`;
+      }
+    }
+
     // --- API LOADING ---
     async function loadDataFromTMD() {
         const loading = document.getElementById('loading');
@@ -473,21 +507,28 @@
         loading.textContent = '🇹🇭 กำลังเชื่อมต่อฐานข้อมูล TMD...';
         let xmlText = null;
         let success = false;
+        let lastError = null;
 
         for (const proxy of PROXY_LIST) {
             try {
-                const response = await fetch(proxy + encodeURIComponent(TMD_FEED_URL));
+                const url = proxy + encodeURIComponent(TMD_FEED_URL);
+                const response = await fetch(url);
                 if (response.ok) {
                     xmlText = await response.text();
                     success = true;
                     break;
+                } else {
+                    lastError = `HTTP ${response.status}`;
                 }
-            } catch (e) { console.warn(`Proxy failed: ${proxy}`); }
+            } catch (e) { 
+                lastError = e.message;
+                console.warn(`Proxy failed: ${proxy}`, e); 
+            }
         }
 
         if (!success || !xmlText) {
             loading.style.display = 'none';
-            alert('❌ ไม่สามารถดึงข้อมูลได้ (Proxy มีปัญหา)');
+            alert(`❌ ไม่สามารถดึงข้อมูล TMD ได้ผ่าน Proxy ทั้งหมด (${lastError || 'ไม่ทราบสาเหตุ'})\nกรุณาลองใหม่อีกครั้ง หรือใช้ข้อมูล USGS แทน`);
             return;
         }
 
@@ -507,7 +548,7 @@
 
                 const lat = parseFloat(getTag("geolat") || getTag("geo:lat"));
                 const lng = parseFloat(getTag("geolong") || getTag("geo:long"));
-                const link = getTag("link");
+                const link = getTag("link"); 
                 
                 let timeStr = getTag("tmdtime") || getTag("tmd:time");
                 if (timeStr) {
@@ -527,11 +568,19 @@
                     });
                 }
             }
+
+            if (events.length === 0) {
+                alert('⚠️ ไม่พบข้อมูลแผ่นดินไหวจาก TMD ในขณะนี้');
+            }
+
+            allEarthquakes = events;
             renderData(events);
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-result').textContent = `แสดงทั้งหมด ${events.length} รายการ`;
             loading.style.display = 'none';
         } catch (e) {
             console.error(e);
-            loading.textContent = 'Error parsing XML';
+            loading.textContent = '❌ เกิดข้อผิดพลาดในการอ่านข้อมูล XML';
             setTimeout(() => loading.style.display = 'none', 3000);
         }
     }
@@ -554,7 +603,10 @@
                 details: "ข้อมูลจาก USGS Feed",
                 link: f.properties.url
             }));
+            allEarthquakes = events;
             renderData(events);
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-result').textContent = `แสดงทั้งหมด ${events.length} รายการ`;
             loading.style.display = 'none';
         } catch (e) {
             console.error(e);
@@ -563,55 +615,7 @@
         }
     }
 
-    // --- FILE INPUT HANDLING (Fixed) ---
-    document.getElementById('gpxInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            try {
-                // 1. Parse JSON
-                const geojson = JSON.parse(evt.target.result);
-                
-                // 2. Clear old layers
-                faultLineLayer.clearLayers();
-                
-                // 3. Add new layer
-                const layer = L.geoJSON(geojson, {
-                    style: { color: "#d32f2f", weight: 2, opacity: 0.7 },
-                    onEachFeature: (feature, layer) => {
-                        if (feature.properties && feature.properties.name) {
-                            layer.bindPopup(`<b>รอยเลื่อน:</b> ${feature.properties.name}`);
-                        }
-                    }
-                });
-                layer.addTo(faultLineLayer);
-
-                // 4. Success Check
-                if (faultLineLayer.getLayers().length > 0) {
-                     alert(`✅ โหลดไฟล์ ${file.name} สำเร็จ`);
-                     
-                     // Try to fit bounds (ignore error if global/complex geometry)
-                     try {
-                         const bounds = layer.getBounds();
-                         if(bounds.isValid()) map.fitBounds(bounds);
-                     } catch(err) {
-                         console.warn("Auto-zoom failed (ignored):", err);
-                     }
-                } else {
-                    throw new Error("No visible layers in GeoJSON");
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("❌ ไฟล์ GeoJSON ไม่ถูกต้อง (หรือรูปแบบไม่รองรับ)"); 
-            }
-        };
-        reader.readAsText(file);
-    });
-
-    // Event Listeners
+    // --- EVENT LISTENERS ---
     document.getElementById('load-tmd').addEventListener('click', loadDataFromTMD);
     document.getElementById('load-usgs').addEventListener('click', loadDataFromUSGS);
 
@@ -621,6 +625,9 @@
         document.getElementById('event-list').innerHTML = "";
         updateStats([]);
         document.getElementById('gpxInput').value = "";
+        allEarthquakes = [];
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-result').textContent = 'แสดงทั้งหมด 0 รายการ';
     });
 
     document.getElementById('map-type').addEventListener('change', function(e) {
@@ -628,7 +635,36 @@
         baseLayers[e.target.value].addTo(map);
     });
 
-    // Image Viewer
+    document.getElementById('gpxInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const geojson = JSON.parse(evt.target.result);
+                faultLineLayer.clearLayers();
+                L.geoJSON(geojson, {
+                    style: { color: "red", weight: 3, opacity: 0.7 },
+                    onEachFeature: (feature, layer) => {
+                        if (feature.properties && feature.properties.name) {
+                            layer.bindPopup(`<b>รอยเลื่อน:</b> ${feature.properties.name}`);
+                        }
+                    }
+                }).addTo(faultLineLayer);
+                const bounds = faultLineLayer.getBounds();
+                if(bounds.isValid()) map.fitBounds(bounds);
+                alert(`✅ โหลดไฟล์ ${file.name} สำเร็จ`);
+            } catch (err) { alert("❌ ไฟล์ GeoJSON ไม่ถูกต้อง"); }
+        };
+        reader.readAsText(file);
+    });
+
+    // ตัวกรองตามการพิมพ์ในช่องค้นหา
+    document.getElementById('search-input').addEventListener('input', function(e) {
+        filterEarthquakes(e.target.value);
+    });
+
+    // Image Viewer Logic
     document.addEventListener('click', function(e) {
       if (e.target.classList.contains('fullscreen-trigger')) {
         document.getElementById('fullscreenImage').src = e.target.src;
@@ -645,7 +681,7 @@
         });
     }, 1000);
 
-    // Initial Load
+    // --- INITIALIZATION ---
     initStaticMarkers();
     
   </script>
